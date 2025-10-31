@@ -107,9 +107,9 @@ class Despesas:
         sql_para_criar_tabela = """
                                     CREATE TABLE IF NOT EXISTS despesas (
                                     descricao VARCHAR(200),
-                                    valor varchar(200),
+                                    valor INT,
                                     categoria VARCHAR(200),
-                                    data VARCHAR(200) PRIMARY KEY
+                                    data DATE PRIMARY KEY
                                     );
                                 """
         
@@ -123,6 +123,9 @@ class Despesas:
         
         # Ligando o def prencer com o init pelo event
         self.treeview.bind("<<TreeviewSelect>>", self.preencher)
+
+        # Ligando o def lista_salva com o init pelo event
+        self.lista_salva()
         
 
     #Função do botão adicionar
@@ -131,18 +134,19 @@ class Despesas:
         desc = self.entry_desc.get()
         valor = self.entry_valor.get()
         categ = self.entry_categ.get()
-        data = self.entry_data.get()
+        date = self.entry_data.get()
 
-        if desc == "" or valor == "" or categ == "" or data == "":
+        if desc == "" or valor == "" or categ == "" or date == "":
             messagebox.showerror(message="Digite para adicionar!")#mensagem de erro
                        
         else:
-            self.treeview.insert("",tk.END,values=[desc, valor, categ, data])#end é para inserir
+            self.treeview.insert("",tk.END,values=[desc, valor, categ, date])#end é para inserir
             #Apagar as coisas escritas no entry ao adicionar no tree
             self.entry_desc.delete(0,tk.END)
             self.entry_valor.delete(0,tk.END)
             self.entry_categ.delete(0,tk.END)
             self.entry_data.delete(0,tk.END)
+
 
             #Enviar para o banco de 
             #criando a conexão
@@ -155,7 +159,7 @@ class Despesas:
                             VALUES (?, ?, ?, ?)
                         """
              
-            cursor.execute(sql_insert,[desc, valor, categ, data])#executar comando
+            cursor.execute(sql_insert,[desc, valor, categ, date])#executar comando
             conexao.commit()#comitando o comando       
 
             #fechando cursor e a conexao
@@ -168,9 +172,34 @@ class Despesas:
         if escolhida == "":
             messagebox.showerror(message="Selecione uma linha para excluir!")
         else:
-            selc = self.treeview.item(escolhida)
+            self.treeview.item(escolhida)
             self.treeview.delete(escolhida)
 
+            desc = self.entry_desc.get()
+            valor = self.entry_valor.get()
+            categ = self.entry_categ.get()
+            date = self.entry_data.get()
+
+            #Excluindo no bd
+            conexao = sqlite3.connect("bd_controle_despesas.sqlite")
+            cursor = conexao.cursor()
+            # função para excluir da tabela
+            sql_delete = """
+                            DELETE FROM despesas
+                            WHERE descricao = (?) AND valor = (?) AND categoria = (?) AND data = (?)
+                        """
+            #função
+            cursor.execute(sql_delete,[desc, valor, categ, date])
+            conexao.commit()
+            #Fechar
+            cursor.close()
+            conexao.close()
+
+            #Excluir do entry se for deletado
+            self.entry_desc.delete(0,tk.END)
+            self.entry_valor.delete(0,tk.END)
+            self.entry_categ.delete(0,tk.END)
+            self.entry_data.delete(0,tk.END)
 
     #def para prencer o campo do entry ao clicar na linha do tree
     def preencher(self, event):
@@ -190,9 +219,30 @@ class Despesas:
                 self.entry_categ.insert(0, valores[2])
                 self.entry_data.insert(0, valores[3])
         
-        
-    
+    #def para atualizar a lsta
+    def atualizar(self):
+        pass
 
+
+    #def para trazer a lista salva do bd para o treeview
+    def lista_salva(self):
+               
+        conexao = sqlite3.connect("bd_controle_despesas.sqlite")
+        cursor = conexao.cursor()
+
+        sql_para_selecionar_despesas = """ SELECT descricao, valor, categoria, data FROM despesas; """
+
+        cursor.execute(sql_para_selecionar_despesas)
+
+        #O fatchall vai trazer uma lista de lista
+        lista_de_despesas = cursor.fetchall()
+         
+        cursor.close()
+        conexao.close()
+
+        #Inserindo os itens na treeview
+        for linha in lista_de_despesas:
+            self.treeview.insert("","end",values=[linha[0], linha[1], linha[2], linha[3]])
 
 
     def run(self):
