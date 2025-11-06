@@ -85,7 +85,8 @@ class Despesas:
         #Botão para atualizar os itens na treeview
         botao_atl = ttk.Button(frame_botao,
                            text="ATUALIZAR",
-                           style="warning")#secondary
+                           style="warning",
+                           command=self.atualizar)#secondary
         botao_atl.pack(side="right", pady=15, padx=5)
 
         self.treeview = ttk.Treeview(self.janela, height= 30,padding=80)
@@ -221,8 +222,44 @@ class Despesas:
         
     #def para atualizar a lsta
     def atualizar(self):
-        pass
+        #Para verificar se tem alguma linha selecionada para ser aterada
+        try:
+            iid_selecionado = self.treeview.selection()[0]
+        except:
+            messagebox.showwarning("Aviso", "Por favor selecione um registro para alterar")
+            return
+        
+        desc = self.entry_desc.get()
+        valor = self.entry_valor.get()
+        categ = self.entry_categ.get()
+        data =self.entry_data.get()
 
+        if not (desc and valor and categ and data):
+            messagebox.showerror("Erro", "Por favor preencha todos os campos")
+            return
+        
+        try:
+            conexao = sqlite3.connect("bd_controle_despesas.sqlite")
+            cursor = conexao.cursor()
+
+            cursor.execute(
+                """
+                    UPDATE despesas
+                    SET descricao = ?, valor = ?, categoria = ?, data = ?
+                    WHERE data = ?
+                """, [desc, valor, categ, data, iid_selecionado]
+            )
+
+            conexao.commit()
+
+            cursor.close()
+            conexao.close()
+
+            messagebox.showinfo("Sucesso", "Registro alterado com sucesso!")
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao alterar registro: {e}")
+        
 
     #def para trazer a lista salva do bd para o treeview
     def lista_salva(self):
